@@ -1,0 +1,95 @@
+a {
+    cursor: pointer;
+}
+#highlight-textarea{
+    color: rgb(204, 26, 26);
+    position: absolute;
+    z-index: -1;
+    font-family: monospace;
+}
+#program{
+    background-color: rgba(255, 255, 255, 0);
+    font-family: monospace;
+    position: absolute;
+}
+.content{
+    position: absolute;
+    top: 96px;
+    width: 100%;
+}
+body{
+    background-color: #f3f3f3;
+}
+.block {
+    position: relative;
+    margin: 20px;
+}
+textarea{
+    background-color: #fff;
+    border-radius: 5px;
+    border: 1px solid #eaeaea;
+    height: 300px;
+}
+.suggestion-block{
+    padding: 10px;
+    float: left;
+    margin: 10px;
+    border: 1px dashed #afafaf;
+    text-align: center;
+}
+.suggestion-block:hover{
+    background-color: #fff;
+    border: 1px solid #d2d2d2;
+    cursor: pointer;
+}
+#suggestions{
+    margin-top: -10px;
+    overflow: auto;
+    height: auto;
+}
+.blue{
+    color: #1d95ff;
+}
+.gray{
+    color: #868686;
+}
+.header {
+    width: 100%;
+    top: 0;
+    position: absolute;
+    text-align: center;
+    height: 96px;
+    background-color: #0d90c1;
+    z-index: -1;
+    box-shadow: 0 0 10px #000;
+}
+h2{
+    color: #fff;
+}
+.slogan{
+    color: #d7f0ff;
+    margin-top: -9px;
+    text-align: center;
+}
+.spacer{
+    height: 60px;
+    float: left;
+    width: 100%;
+}
+.logo{
+    text-align: center;
+}
+.logo a{
+    color: #ffffff;
+}
+a:hover{
+    text-decoration: none;
+}
+.textarea-merger{
+    position: relative;
+    width: 100%;
+    height: 135px;
+}
+.red{
+    color: #f00;
+}

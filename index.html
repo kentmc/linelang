@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LineLang</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+    <script src="linelang.js"></script>
+    <script src="init.js"></script>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon"/>
+</head>
+<body>
+<div class="header">
+    <h2 class="logo"><a href="/">LineLang</a></h2>
+    <p class="slogan">A language describing text operations on lines of text</p>
+</div>
+<div class="content">
+    <div class="container">
+
+        <div class="spacer"></div>
+        <?php echo $program_description;?>
+        <form>
+            <div class="row">
+                <div class="form-group col-sm-12">
+                    <label>For each line do the following</label>
+                    <div class="textarea-merger">
+                        <textarea id="program" class="form-control" rows="6"></textarea>
+                        <textarea id="highlight-textarea" class="form-control" rows="6"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group col-sm-12">
+                    <label id="hint-label">You <span class='blue'>must</span> add one of these to create a meaningful
+                        program</label>
+                    <div id="suggestions"></div>
+                </div>
+            </div>
+            <div class="spacer"></div>
+            <div class="row">
+                <div class="form-group col-sm-6">
+                    <label>Text to process</label>
+                    <textarea id="input" class="form-control" rows="10"></textarea>
+                </div>
+
+                <div class="form-group col-sm-6">
+                    <label>Result</label>
+                    <textarea id="output" class="form-control" rows="10"></textarea>
+                </div>
+            </div>
+            <div class="spacer"></div>
+            <div class="col-sm-12">
+                <h3>Example programs</h3>
+                <div id="examples"></div>
+            </div>
+            <div class="spacer"></div>
+            <h4>Grammar for building a program</h4>
+            <div id="grammar"></div>
+            <div class="spacer"></div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+<script>
+    var examples = [
+        ["Remove empty lines from a text file", "if line is empty then remove line", "Some text\n\nSome more text\n\nEven more text"],
+        ["Remove all lines containing some text string", "if line contains \"bad\" then remove line", "The weather is nice\nThe month is bad\nThe sky is nice\nThe water is bad"],
+        ["Add text to the end of each line", "add \" soon.\" at end of line", "See you\nI will be home\nThe days will be warm"],
+        ["Make text upper case or lower case", "if line contains \"!\" then convert all characters to upper case else convert all characters to lower case", "Some text!\nSome more text\nEven more text!"],
+        ["Change the format of first and last name", "add \" \" at beginning of line and then\nmove text between beginning of last occurrence of \" \" and end of line to position 0 and then\nremove first occurrence of \" \" and then\nreplace text between position 1 and beginning of first occurrence of \" \" with \".\"", "James Smith\nJohn Johnson\nRobert Williams"],
+        ["Swap columns of a CSV file", "swap text between\n  beginning of line \nand \n  beginning of first occurrence of \",\"\nwith \ntext between \n  end of occurrence number 3 of \",\" \nand \n  beginning of occurrence number 4 of \n\",\"", "Jack,Manchester,Bike,1,1992\nMichael,London,Car,2,1988\nPete,Birmingham,Bike,3,1991"],
+        ["Truncate long lines and add 3 dots at the end of the line", "if <length of line> is greater than 30 then\n  remove text between position 10 and end of line and then\n  add \"...\" at end of line", "This is a long line. This is a long line.\nThis is a short line."]
+    ];
+    var examples_div = document.getElementById("examples");
+    examples.forEach(example => {
+        var name = example[0];
+        var program = example[1];
+        var input = example[2];
+        var a = document.createElement("a");
+        a.innerHTML = name;
+        a.onclick = () => {
+            document.getElementById("program").innerHTML = program;
+            document.getElementById("input").innerHTML = input;
+            $('textarea').trigger('input');
+        };
+        var div = document.createElement("div");
+        div.appendChild(a);
+        examples_div.appendChild(div);
+    })
+</script>

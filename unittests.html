@@ -1,0 +1,840 @@
+<script src="linelang.js"></script>
+<script>
+
+    var currentTestName;
+    var failed;
+    var success;
+    var subtestIndex;
+    var debug;
+    var debugSubtestIndex;
+
+    function debugTest(testName, subtestIndex) {
+        reset();
+        currentTestName = testName;
+        debug = true;
+        debugSubtestIndex = subtestIndex;
+        TESTS[testName]();
+    }
+
+    function reset() {
+        currentTestName = "";
+        failed = 0;
+        success = 0;
+        subtestIndex = 1;
+    }
+
+    function runTests() {
+        reset();
+        debug = false;
+        Object.keys(TESTS).forEach(function (test) {
+            currentTestName = test;
+            subtestIndex = 1;
+            TESTS[test]();
+        });
+        console.log("***********************");
+        console.log("TESTS SUCCEEDED: " + success);
+        console.log("TESTS FAILED: " + failed);
+    }
+
+    function assert(program, input, expectedOutput) {
+        var output = runProgram(input.split("\n"), program).output.join("\n");
+        if (output == expectedOutput)
+            success += 1;
+        else {
+            failed += 1;
+            console.log("FAILED: " + currentTestName + " for sub test " + subtestIndex + " - write debugTest('" + currentTestName + "', " + subtestIndex + ") for more info.");
+        }
+        if (debugSubtestIndex == subtestIndex) {
+            console.log("Program:");
+            console.log(program);
+            console.log("---------------");
+            console.log("Input:");
+            console.log(input);
+            if (input[input.length - 1] == "\n") // chrome doesn't log the last line if it is empty
+                console.log("");
+            console.log("---------------");
+            console.log("Expected output:");
+            console.log(expectedOutput);
+            if (expectedOutput[expectedOutput.length - 1] == "\n") // chrome doesn't log the last line if it is empty
+                console.log("");
+            console.log("---------------");
+            console.log("Actual output:");
+            console.log(output);
+            if (output[output.length - 1] == "\n") // chrome doesn't log the last line if it is empty
+                console.log("");
+        }
+        subtestIndex += 1;
+    }
+
+    var TESTS = {
+        shouldDoNothing: function () {
+            assert("", "foo\nbar\nbaz", "foo\nbar\nbaz");
+            assert("    \n \r \n\r\t \t \r \n \n  \t  ", "foo\nbar\nbaz", "foo\nbar\nbaz");
+            assert("", "", "");
+            assert("    \n \r \t    ", "", "");
+        },
+        shouldWorkRegardlessOfSpaceAndLineBreaks: function () {
+            assert("if line contains \"bc\" then remove line", "abc\nab\nbc\nabbbbbcnnn\nac", "ab\nac");
+            assert("if line  \t   \r  \n \t\r\n   contains      \n   \"bc\"     then\nremove line", "abc\nab\nbc\nabbbbbcnnn\nac", "ab\nac");
+            assert(" if line contains \"bc\" then remove line ", "abc\nab\nbc\nabbbbbcnnn\nac", "ab\nac");
+            assert("\nif line contains \"bc\" then remove line\n", "abc\nab\nbc\nabbbbbcnnn\nac", "ab\nac");
+        },
+        shouldDeleteLine: function () {
+            assert("remove line", "\nfoo bar\n\nbaz", "");
+            assert("remove line", "abc 123\nfoo bar\nbaz", "");
+            assert("remove line", "a", "");
+        },
+        shouldRemoveLine: function () {
+            assert("remove line", "\nfoo bar\n\nbaz", "");
+            assert("remove line", "abc 123\nfoo bar\nbaz", "");
+            assert("remove line", "a", "");
+        },
+        shouldRemoveLineContent: function () {
+            assert("remove text between beginning of line and end of line", "\nfoo bar\n\nbaz", "\n\n\n");
+            assert("remove text between position 0 and end of line", "abc 123\nfoo bar\nbaz", "\n\n");
+            assert("remove all characters", "abc 123\nfoo bar\nbaz", "\n\n");           
+        },
+        shouldRemoveString: function () {
+            assert("remove all occurrences of \"hi\"", "hey\nhi\nhi there\nhello there\nhi hi hi\nhihihi", "hey\n\n there\nhello there\n  \n");
+            assert("remove all occurrences of \"hi\"", ")/\"#&/¤%hi/#/R272346hiVNSDJhi837", ")/\"#&/¤%/#/R272346VNSDJ837");
+            assert("remove all occurrences of \"7\"", "123456717177734", "1234561134");
+            assert("remove all occurrences of \"345\"", "34  45  3456 34 5", "34  45  6 34 5");
+            assert("remove all occurrences of \".&%\"", "11111}]\\.&%#!/1111¤", "11111}]\\#!/1111¤");
+        },
+        shouldHandleIfCorrect: function () {
+            assert("if line is empty then remove line", "a\n\nb\n1\naaa1bbb\n1", "a\nb\n1\naaa1bbb\n1");
+            assert("if line is empty then remove line else remove all occurrences of \"1\"", "a\n\nb\n1\naaa1bbb\n1", "a\nb\n\naaabbb\n");
+        },
+        shouldCheckIfLineIsEmpty: function () {
+            assert("if line is empty then remove line", "a\n \nb\n\n\n1\n\t\n9", "a\n \nb\n1\n\t\n9");
+        },
+        shouldCheckIfLineContainsString: function () {
+            assert("if line contains \"hi\" then remove line", "ab\nhi\nabhiab\n123\n\n", "ab\n123\n\n");
+        },
+        shouldRemoveFirstOccurenceOfString: function () {
+            assert("remove first occurrence of \"hi\"", "hihihi\n\nhi\n123hi123hi\n", "hihi\n\n\n123123hi\n");
+        },
+        shouldRemoveLastOccurenceOfString: function () {
+            assert("remove last occurrence of \"hi\"", "hihihi\n\nhi\n123hi123hi\na", "hihi\n\n\n123hi123\na");
+        },
+        shouldAddStringToBeginningOfLine: function () {
+            assert("add \"yay\" at beginning of line", "hihihi\n\nhi\n123hi123hi\n", "yayhihihi\nyay\nyayhi\nyay123hi123hi\nyay");
+        },
+        shouldAddStringToEndOfLine: function () {
+            assert("add \"yay\" at end of line", "hihihi\n\nhi\n123hi123hi\n", "hihihiyay\nyay\nhiyay\n123hi123hiyay\nyay");
+        },
+        shouldAddStringAtPosition: function () {
+            assert("add \"yay\" at position -1", "foo\nbar\n\nbaz", "foo\nbar\n\nbaz");
+            assert("add \"yay\" at position 0", "foo\nbar\n\nbaz", "yayfoo\nyaybar\nyay\nyaybaz");
+            assert("add \"yay\" at position 2", "foo\nbar\n\nbaz", "foyayo\nbayayr\n\nbayayz");
+            assert("add \"yay\" at position 3", "foo\nbar\n\nbaz", "fooyay\nbaryay\n\nbazyay");
+            assert("add \"yay\" at position 4", "foo\nbar\n\nbaz", "foo\nbar\n\nbaz");
+        },
+        shouldDoMultipleActions: function () {
+            assert("add \"1\" at position 3 and then remove all occurrences of \"2\"", "foo\nb2a2r\n\nbaz2\n\n", "foo1\nba1r\n\nbaz1\n\n");
+        },
+        shouldHandleRemovedAndDeletedLinesWithCare: function () {
+            assert(
+                "remove line and then remove line",
+                "foo\nbar\n\nbazzz",
+                ""
+            );
+            assert(
+                "remove line and then remove all occurrences of \"foo\"",
+                "foo\nbar\n\nbazzz",
+                ""
+            );
+            assert(
+                "remove line and then add \"foo\" at end of line",
+                "foo\nbar\n\nbazzz",
+                ""
+            );
+            assert(
+                "remove line and then add \"foo\" at beginning of line",
+                "foo\nbar\n\nbazzz",
+                ""
+            );
+            assert(
+                "remove line and then add \"foo\" at position 1",
+                "foo\nbar\n\nbazzz",
+                ""
+            );
+            assert(
+                "remove line and then add \"foo\" at position 1",
+                "foo\nbar\n\nbazzz",
+                ""
+            );
+            assert(
+                "remove line and then add \"foo\" at position 0",
+                "",
+                ""
+            );
+            assert(
+                "remove line and then if line contains \"foo\" then remove line else add \"bar\" at beginning of line",
+                "foo\nbar\n\nbazzz",
+                ""
+            );
+        },
+        shouldNotLogicalExpression: function () {
+            assert("if not line is empty then remove line", "a\nb\n\n\nccc\na", "\n");
+            assert("if not line contains \"foo\" then remove line", "a\nfoo\n\n\nfoo\nbar", "foo\nfoo");
+            assert("if not not line contains \"foo\" then remove line", "a\nfoo\n\n\nfoo\nbar", "a\n\n\nbar");
+            assert("if not not not line contains \"foo\" then remove line", "a\nfoo\n\n\nfoo\nbar", "foo\nfoo");
+        },
+        shouldAndLogicalExpression: function () {
+            assert("if line contains \"a\" and line contains \"b\" then remove line", "a\nb\nab\n\nabab\nabc", "a\nb\n");
+            assert("if line is empty and not line is empty then remove line", "a\nfoo\n\n\nfoo\nbar", "a\nfoo\n\n\nfoo\nbar");
+        },
+        shouldOrLogicalExpression: function () {
+            assert("if line contains \"a\" or line contains \"b\" then remove line", "de\na\nb\nab\n\nabab\nc", "de\n\nc");
+            assert("if line is empty or line contains \"foo\" then remove line", "a\nfoo\n\n\nfoo\nbar", "a\nbar");
+        },
+        shouldEncapsulateIfCommands: function () {
+            assert("if line is empty then (add \"?\" at beginning of line) and then add \"!\" at beginning of line",
+                "a\n",
+                "!a\n!?");
+            assert("if line is empty then (add \"?\" at beginning of line and then add \"!\" at beginning of line)",
+                "a\n",
+                "a\n!?");
+            assert("if line is empty then add \"?\" at beginning of line and then add \"!\" at beginning of line",
+                "a\n",
+                "a\n!?");
+            assert("if line contains \"1\" then (remove all characters and then add \"!\" at end of line) " +
+                "else if line contains \"2\" then (add \"?\" at end of line and then add \".\" at beginning of line) " +
+                "else (remove all characters and then add \",\" at end of line) " +
+                "and then add \":\" at end of line",
+                "1\n2\n3\n\n12",
+                "!:\n.2?:\n,:\n,:\n!:")
+        },
+        shouldReplaceString: function () {
+            assert("replace all occurrences of \"a\" with \"b\"", "abc abc\nab\n\nabcaaaa\nccc", "bbc bbc\nbb\n\nbbcbbbb\nccc");
+        },
+        shouldReplaceFirstOccurenceOfString: function () {
+            assert("replace first occurrence of \"a\" with \"b\"", "abc abc\nab\n\nabcaaaa\nccc", "bbc abc\nbb\n\nbbcaaaa\nccc");
+        },
+        shouldReplaceLastOccurenceOfString: function () {
+            assert("replace last occurrence of \"a\" with \"b\"", "abc abc\nab\n\nabcaaaa\nccc", "abc bbc\nbb\n\nabcaaab\nccc");
+        },
+        shouldMatchEveryCharacter: function () {
+            assert("replace all characters with \"a\"", "abc abc\nab\n\nabcaaaa\nccc", "aaaaaaa\naa\n\naaaaaaa\naaa");
+            assert("remove all characters", "abc abc\nab\n\nabcaaaa\nccc", "\n\n\n\n");
+        },
+        shouldSwap: function () {
+            assert("swap first occurrence of \"a\" with first occurrence of \"b\"", "ab\na\nb\nc\naacbb\n\nba\nbabac", "ba\na\nb\nc\nbacab\n\nab\nabbac");
+            assert("swap last occurrence of \"a\" with first occurrence of \"b\"", "ab\na\nb\nc\naacbb\n\nba\nbabac", "ba\na\nb\nc\nabcab\n\nab\naabbc");
+            assert("swap last occurrence of \"a\" with last occurrence of \"b\"", "ab\nba\nabc\nbac\naaaa----bbbb\na----b\nb-----a\nabab\n", "ba\nab\nbac\nabc\naaab----bbba\nb----a\na-----b\nabba\n");
+        },
+        shouldMatchAllCharacters: function () {
+            assert("replace all characters with \"z\"", "abczzzabc", "zzzzzzzzz");
+            assert("replace all characters with \"z\"", " - - ! a - peo9#(\"(%)#", "zzzzzzzzzzzzzzzzzzzzzz");
+        },
+        shouldDoSomethingComplex: function () {
+            assert(
+                "if line contains \"a\" then add \"b\" at end of line else if not line contains \"c\" then swap first occurrence of \"d\" with last occurrence of \"e\" and then add \"f\" at position 3 else remove all characters",
+                "abcdef\nbcdef\ncdef\ndddeeef\nef\nf",
+                "abcdefb\n\n\neddfeedf\nef\nf"
+            );
+        },
+        shouldMatchContentOfLine: function () {
+            assert("add line at end of line", "123\n\n1\n-\na\na-----", "123123\n\n11\n--\naa\na-----a-----");
+        },
+        shouldMatchFromPositionToPosition: function () {
+            assert("remove text between position 2 and position 5", "123456789", "126789");
+            assert("remove text between position 0 and position 2", "123456789", "3456789");
+            assert("remove text between position 0 and position 9", "123456789", "");
+            assert("remove text between position 0 and position 10", "123456789", "");
+            assert("remove text between position 5 and position 5", "123456789", "123456789");
+            assert("remove text between position 8 and position 6", "123456789", "1234569");
+        },
+        shouldAddNewLine: function () {
+            assert("add new line above line", "123\n45\n\n6789", "\n123\n\n45\n\n\n\n6789");
+            assert("add new line below line", "123\n45\n\n6789", "123\n\n45\n\n\n\n6789\n");
+
+            assert("add new line 1 line above line", "123\n45\n\n6789", "\n123\n\n45\n\n\n\n6789");
+            assert("add new line 1 line below line", "123\n45\n\n6789", "123\n\n45\n\n\n\n6789\n");
+
+            assert("add new line 2 lines above line", "123\n45\n\n6789", "\n\n123\n\n45\n\n\n6789");
+            assert("add new line 2 lines below line", "123\n45\n\n6789", "123\n45\n\n\n\n6789\n\n");
+        },
+        shouldFindPositionBeforeMatch: function () {
+            assert("add \"abc\" at beginning of last occurrence of \"yy\"", "123yyy123yyyy123", "123yyy123yyabcyy123");
+            assert("add \"abc\" at beginning of last occurrence of \"yy\"", "123yyy123yyyy", "123yyy123yyabcyy");
+            assert("add \"abc\" at beginning of last occurrence of \"yy\"", "yy123y123", "abcyy123y123");
+            assert("add \"abc\" at beginning of last occurrence of \"yy\"", "", "");
+            assert("add \"abc\" at beginning of last occurrence of \"yy\"", "yy", "abcyy");
+        },
+        shouldFindPositionAfterMatch: function () {
+            assert("add \"abc\" at end of last occurrence of \"yy\"", "123yyy123yyyy123", "123yyy123yyyyabc123");
+            assert("add \"abc\" at end of last occurrence of \"yy\"", "123yyy123yyyy", "123yyy123yyyyabc");
+            assert("add \"abc\" at end of last occurrence of \"yy\"", "yy123y123", "yyabc123y123");
+            assert("add \"abc\" at end of last occurrence of \"yy\"", "123y123", "123y123");
+            assert("add \"abc\" at end of last occurrence of \"yy\"", "yy", "yyabc");
+        },
+        shouldMatchOccurreceNumberFromRight: function () {
+            assert("add \"!\" at beginning of occurrence number 0 of \"abc\" from right",
+                "     abc     abc      abc   ",
+                "     abc     abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 1 of \"abc\" from right",
+                "     abc     abc      abc   ",
+                "     abc     abc      !abc   ");
+            assert("add \"!\" at beginning of occurrence number 2 of \"abc\" from right",
+                "     abc     abc      abc   ",
+                "     abc     !abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 3 of \"abc\" from right",
+                "     abc     abc      abc   ",
+                "     !abc     abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 4 of \"abc\" from right",
+                "     abc     abc      abc   ",
+                "     abc     abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 2 of \"??\" from right",
+                "??????",
+                "???!???");
+        },
+        shouldMatchOccurreceNumber: function () {
+            assert("add \"!\" at beginning of occurrence number 0 of \"abc\"",
+                "     abc     abc      abc   ",
+                "     abc     abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 1 of \"abc\"",
+                "     abc     abc      abc   ",
+                "     !abc     abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 2 of \"abc\"",
+                "     abc     abc      abc   ",
+                "     abc     !abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 3 of \"abc\"",
+                "     abc     abc      abc   ",
+                "     abc     abc      !abc   ");
+            assert("add \"!\" at beginning of occurrence number 4 of \"abc\"",
+                "     abc     abc      abc   ",
+                "     abc     abc      abc   ");
+            assert("add \"!\" at beginning of occurrence number 2 of \"??\"",
+                "??????",
+               "?!?????");
+        },
+        shouldFindPositionNCharactersAfterAndBeforePosition: function () {
+            assert("add \"!\" at position 5 characters after position 2",
+                    "aaaaaaaaaaa",
+                    "aaaaaaa!aaaa");
+
+            assert("add \"!\" at position 50 characters after position 2",
+                    "aaaaaaaaaaa",
+                    "aaaaaaaaaaa!");
+
+            assert("add \"!\" at position 0 characters after position 2",
+                    "aaaaaaaaaaa",
+                    "aa!aaaaaaaaa");
+
+            assert("add \"!\" at position 1 character after position 2",
+                    "aaaaaaaaaaa",
+                    "aaa!aaaaaaaa");
+
+            assert("add \"!\" at position 5 characters before position 7",
+                    "aaaaaaaaaaa",
+                    "aa!aaaaaaaaa");
+
+            assert("add \"!\" at position 50 characters before position 7",
+                    "aaaaaaaaaaa",
+                    "!aaaaaaaaaaa");
+
+            assert("add \"!\" at position 0 characters before position 2",
+                    "aaaaaaaaaaa",
+                    "aa!aaaaaaaaa");
+
+            assert("add \"!\" at position 1 character before position 7",
+                    "aaaaaaaaaaa",
+                    "aaaaaa!aaaaa");
+        },
+        shouldCheckIfMatchBeginsWithString: function () {
+            assert("if text between position 3 and position 8 begins with \"abc\" then remove line",
+                    "111abc00000000\n11abc00000000\n1111abc00000\n111abc0",
+                    "11abc00000000\n1111abc00000");
+            assert("if text between position 3 and position 8 begins with \"a\" then remove line",
+                    "111abc00000000\n11abc00000000\n1111abc00000\n111abc0",
+                    "11abc00000000\n1111abc00000");
+
+        },
+        shouldCheckIfMatchEndsWithString: function () {
+            assert("if text between position 1 and position 6 ends with \"abc\" then remove line",
+                    "111abc00000000\n11abc00000000\n1111abc00000\n111abc0",
+                    "11abc00000000\n1111abc00000");
+            assert("if text between position 1 and position 6 ends with \"c\" then remove line",
+                    "111abc00000000\n11abc00000000\n1111abc00000\n111abc0",
+                    "11abc00000000\n1111abc00000");
+            assert("if text between position 1 and position 999 ends with \"abc\" then remove line",
+                    "11100000000abc\n11abc00000000\n1111abc00000\n111abc0",
+                    "11abc00000000\n1111abc00000\n111abc0");
+        },
+        shouldParseInteger: function () {
+            assert("add \"!?\" at position 3",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123!?\n123!?4");
+        },
+        shouldNegateIntegers: function () {
+            assert("add \"!\" at position (-2) characters after beginning of first occurrence of \"abc\"",
+                "zzz abc abc",
+                "zz!z abc abc");
+            assert("add \"!\" at position -2 characters after beginning of first occurrence of \"abc\"",
+                "zzz abc abc",
+                "zz!z abc abc");
+            assert("add \"!\" at position 2 characters after beginning of first occurrence of \"abc\"",
+                "zzz abc abc",
+                "zzz ab!c abc");
+        },
+        shouldAddIntegers: function () {
+            assert("add \"!\" at position (1 + 2)",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123!\n123!4");
+            assert("add \"!\" at position (2 + 1)",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123!\n123!4");
+            assert("add \"!\" at position (0 + 3)",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123!\n123!4");
+            assert("add \"!\" at position ((-1) + (-4)",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123\n1234");
+            assert("add \"!\" at position ((-1) + 2)",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (0 + 0)",
+                    "1\n12\n123\n1234",
+                    "!1\n!12\n!123\n!1234");
+        },
+        shouldSubtractIntegers: function () {
+            assert("add \"!\" at position (1 - 2)",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123\n1234");
+            assert("add \"!\" at position (2 - 1)",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (0 - 0)",
+                    "1\n12\n123\n1234",
+                    "!1\n!12\n!123\n!1234");
+            assert("add \"!\" at position ((-1) - (-2))",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (0 - 0)",
+                    "1\n12\n123\n1234",
+                    "!1\n!12\n!123\n!1234");
+        },
+        shouldMultiplyIntegers: function () {
+            assert("add \"!\" at position (1 * 1)",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (2 * 1)",
+                    "1\n12\n123\n1234",
+                    "1\n12!\n12!3\n12!34");
+            assert("add \"!\" at position (0 * 0)",
+                    "1\n12\n123\n1234",
+                    "!1\n!12\n!123\n!1234");
+            assert("add \"!\" at position ((-1) * (-2))",
+                    "1\n12\n123\n1234",
+                    "1\n12!\n12!3\n12!34");
+            assert("add \"!\" at position (2 * 3)",
+                    "1\n12\n123\n1234567",
+                    "1\n12\n123\n123456!7");
+        },
+        shouldDivideIntegers: function () {
+            assert("add \"!\" at position (1 / 1)",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (2 / 1)",
+                    "1\n12\n123\n1234",
+                    "1\n12!\n12!3\n12!34");
+            assert("add \"!\" at position (0 / 0)",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123\n1234");
+            assert("add \"!\" at position ((-1) / (-2))",
+                    "1\n12\n123\n1234",
+                    "!1\n!12\n!123\n!1234");
+            assert("add \"!\" at position ((-2) / (-2))",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (2 / 3)",
+                    "1\n12\n123\n1234",
+                    "!1\n!12\n!123\n!1234");
+            assert("add \"!\" at position (3 / 3)",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (4 / 3)",
+                    "1\n12\n123\n1234",
+                    "1!\n1!2\n1!23\n1!234");
+            assert("add \"!\" at position (9 / 3)",
+                    "1\n12\n123\n1234",
+                    "1\n12\n123!\n123!4");
+        },
+        shouldMoveMatchToPosition: function () {
+            assert("move first occurrence of \"abc\" to position 10",
+                ".abc.abc.1234567",
+                "..abc.1abc234567");
+            assert("move first occurrence of \"!\" to position 10",
+                "!a!b!!!!1234567",
+                "a!b!!!!12!34567");
+            assert("move first occurrence of \"abc\" to position 1",
+                ".abc.abc.1234567",
+                ".abc.abc.1234567");
+            assert("move first occurrence of \"abc\" to position 0",
+                ".abc.abc.1234567",
+                "abc..abc.1234567");
+            assert("move first occurrence of \"abc\" to position -1",
+                ".abc.abc.1234567",
+                ".abc.abc.1234567");
+            assert("move first occurrence of \"abc\" to position 17",
+                ".abc.abc.1234567",
+                ".abc.abc.1234567");
+
+            assert("move last occurrence of \"!\" to position 0",
+                "!a!b!!!!1234567",
+                "!!a!b!!!1234567");
+            assert("move last occurrence of \"abc\" to position 0",
+                "!a!b!!!!123abc4567",
+                "abc!a!b!!!!1234567");
+            assert("move last occurrence of \"abc\" to position 6",
+                "123abc4567",
+                "123abc4567");
+            assert("move last occurrence of \"abc\" to position 5",
+                "123abc4567",
+                "123abc4567");
+            assert("move last occurrence of \"abc\" to position 4",
+                "123abc4567",
+                "123abc4567");
+            assert("move last occurrence of \"abc\" to position 3",
+                "123abc4567",
+                "123abc4567");
+            assert("move last occurrence of \"abc\" to position 2",
+                "123abc4567",
+                "12abc34567");
+        },
+        shouldDoArithmeticCorrect: function () {
+            assert("add \"!\" at position 0", "....................", "!....................");
+            assert("add \"!\" at position 1", "....................", ".!...................");
+            assert("add \"!\" at position 0+1", "....................", ".!...................");
+            assert("add \"!\" at position 1+1", "....................", "..!..................");
+            assert("add \"!\" at position 1+1+1", "....................", "...!.................");
+            assert("add \"!\" at position 2+4+3", "....................", ".........!...........");
+            assert("add \"!\" at position 1+2+3-1", "....................", ".....!...............");
+            assert("add \"!\" at position 2-1-1", "....................", "!....................");
+            assert("add \"!\" at position 2*3", "....................", "......!..............");
+            assert("add \"!\" at position 2*3-1", "....................", ".....!...............");
+            assert("add \"!\" at position 1+2*3", "....................", ".......!.............");
+            assert("add \"!\" at position 1+2*3+1", "....................", "........!............");
+            assert("add \"!\" at position 4-5*2+4*2-3+4-5*2*3+4*3*2", "....................", "....................");
+            assert("add \"!\" at position 3*4/6", "....................", "..!..................");
+            assert("add \"!\" at position 1000/10/10/2", "....................", ".....!...............");
+            assert("add \"!\" at position 2*3/6*2*2*2/4", "....................", "..!..................");
+            assert("add \"!\" at position 5*6/(4*6)*4", "....................", "....!................");
+            assert("add \"!\" at position (1+4*2-4*7+8*9-2-4-1+5+2*4)-(3+4*5*(3-2*2))-(2*(3*(-5)))-0-0+0*0-(0)-(1)-2*3*(-4)*(-5)+18", "....................", "...!.................");
+            assert("add \"!\" at position -2*3+7", "....................", ".!...................");
+            assert("add \"!\" at position -2-1+4", "....................", ".!...................");
+            assert("add \"!\" at position (-2)*(-3)", "....................", "......!..............");
+        },
+        shouldAllowEncapsulationOfPosition: function () {
+            assert("add \"a\" at position (2)", "123", "12a3");
+            assert("add \"a\" at position 2", "123", "12a3");
+        },
+        shouldMatchInsideMatch: function () {
+            assert("remove first occurrence of \"a\" in last occurrence of \"aaa\"", "aaaa!!!aaaaa", "aaaa!!!aaaa");
+        },
+        shouldConvertCase: function () {
+            assert("convert all characters to lower case", "ABCabcABCabcABC", "abcabcabcabcabc");
+            assert("convert all characters to upper case", "ABCabcABCabcABC", "ABCABCABCABCABC");
+            assert("convert first occurrence of \"HI\" to lower case", "HI HI HI", "hi HI HI");
+            assert("convert first occurrence of \"HI\" to lower case", "Hi HI HI", "Hi hi HI");
+            assert("convert first occurrence of \"hI\" to upper case", "hI hI hI", "HI hI hI");
+            assert("convert first occurrence of \"hi\" to upper case", "hI hi hI", "hI HI hI");
+        },
+        shouldCountLengthOfMatch: function () {
+            assert("add \"!\" at position <length of text between end of first occurrence of \"(\" and beginning of last occurrence of \")\">",
+                "1234567(89)",
+                "12!34567(89)");
+            assert("add \"!\" at position <length of text between end of first occurrence of \"(\" and beginning of last occurrence of \")\">",
+                "1234567()",
+                "!1234567()");
+            assert("add \"!\" at position <length of text between end of first occurrence of \"(\" and beginning of last occurrence of \")\">",
+                "1234567",
+                "!1234567");
+        },
+        shouldCountNumberOfMatches: function () {
+            assert("add \"!\" at position <count all occurrences of \"?\">",
+                "12345?67?8?",
+                "123!45?67?8?");
+            assert("add \"!\" at position <count all occurrences of \"?\">",
+                "12345678",
+                "!12345678");
+            assert("add \"!\" at position <count all occurrences of \"??\">",
+                "12345???678",
+                "12!345???678");
+            assert("add \"!\" at position <count all occurrences of \"??\">",
+                "12345????678",
+                "123!45????678");
+        },
+        shouldDoDoubleNegation: function () {
+            assert("if 3 is 3 then remove line", "1", "");
+            assert("if -3 is 3 then remove line", "1", "1");
+            assert("if --3 is 3 then remove line", "1", "");
+            assert("if ---3 is 3 then remove line", "1", "1");
+            assert("if ----3 is 3 then remove line", "1", "");
+            assert("if ----3 is -3 then remove line", "1", "1");
+            assert("if ----3 is --3 then remove line", "1", "");
+            assert("if ----3 is ---3 then remove line", "1", "1");
+            assert("if ----3 is ----3 then remove line", "1", "");
+
+            assert("if 3 is (3) then remove line", "1", "");
+            assert("if -3 is 3 then remove line", "1", "1");
+            assert("if -(-3) is 3 then remove line", "1", "");
+            assert("if --(-3) is (3) then remove line", "1", "1");
+            assert("if -(--(-3)) is 3 then remove line", "1", "");
+            assert("if (-(-(-((-3))))) is (-(3)) then remove line", "1", "1");
+            assert("if -(---3) is --(3) then remove line", "1", "");
+            assert("if --(--3) is --(-3) then remove line", "1", "1");
+            assert("if ---(-3) is (-(---3)) then remove line", "1", "");
+        },
+        shouldDoIntegerEqualsComparison: function () {
+            assert("if -99999 is -99998 then remove line", "1", "1");
+            assert("if -3 is -2 then remove line", "1", "1");
+            assert("if -3 is 2 then remove line", "1", "1");
+            assert("if -1 is 0 then remove line", "1", "1");
+            assert("if -1 is -0 then remove line", "1", "1");
+            assert("if 0 is 1 then remove line", "1", "1");
+            assert("if -0 is 1 then remove line", "1", "1");
+            assert("if 2 is 3 then remove line", "1", "1");
+
+            assert("if 99999 is 99999 then remove line", "1", "");
+            assert("if 1 is 1 then remove line", "1", "");
+            assert("if 0 is 0 then remove line", "1", "");
+            assert("if 0 is -0 then remove line", "1", "");
+            assert("if -0 is -0 then remove line", "1", "");
+            assert("if -0 is 0 then remove line", "1", "");
+            assert("if -1 is -1 then remove line", "1", "");
+            assert("if -99999 is -99999 then remove line", "1", "");
+
+            assert("if -99998 is -99999 then remove line", "1", "1");
+            assert("if -2 is -3 then remove line", "1", "1");
+            assert("if 2 is -3 then remove line", "1", "1");
+            assert("if 0 is -1 then remove line", "1", "1");
+            assert("if -0 is -1 then remove line", "1", "1");
+            assert("if 1 is 0 then remove line", "1", "1");
+            assert("if 1 is -0 then remove line", "1", "1");
+            assert("if 3 is 2 then remove line", "1", "1");
+        },
+        shouldDoIntegerNotEqualsComparison: function () {
+            assert("if -99999 is not -99998 then remove line", "1", "");
+            assert("if -3 is not -2 then remove line", "1", "");
+            assert("if -3 is not 2 then remove line", "1", "");
+            assert("if -1 is not 0 then remove line", "1", "");
+            assert("if -1 is not -0 then remove line", "1", "");
+            assert("if 0 is not 1 then remove line", "1", "");
+            assert("if -0 is not 1 then remove line", "1", "");
+            assert("if 2 is not 3 then remove line", "1", "");
+
+            assert("if 99999 is not 99999 then remove line", "1", "1");
+            assert("if 1 is not 1 then remove line", "1", "1");
+            assert("if 0 is not 0 then remove line", "1", "1");
+            assert("if 0 is not -0 then remove line", "1", "1");
+            assert("if -0 is not -0 then remove line", "1", "1");
+            assert("if -0 is not 0 then remove line", "1", "1");
+            assert("if -1 is not -1 then remove line", "1", "1");
+            assert("if -99999 is not -99999 then remove line", "1", "1");
+
+            assert("if -99998 is not -99999 then remove line", "1", "");
+            assert("if -2 is not -3 then remove line", "1", "");
+            assert("if 2 is not -3 then remove line", "1", "");
+            assert("if 0 is not -1 then remove line", "1", "");
+            assert("if -0 is not -1 then remove line", "1", "");
+            assert("if 1 is not 0 then remove line", "1", "");
+            assert("if 1 is not -0 then remove line", "1", "");
+            assert("if 3 is not 2 then remove line", "1", "");
+        },
+        shouldDoIntegerLessThanComparison: function () {
+            assert("if -99999 is less than -99998 then remove line", "1", "");
+            assert("if -3 is less than -2 then remove line", "1", "");
+            assert("if -3 is less than 2 then remove line", "1", "");
+            assert("if -1 is less than 0 then remove line", "1", "");
+            assert("if -1 is less than -0 then remove line", "1", "");
+            assert("if 0 is less than 1 then remove line", "1", "");
+            assert("if -0 is less than 1 then remove line", "1", "");
+            assert("if 2 is less than 3 then remove line", "1", "");
+
+            assert("if 99999 is less than 99999 then remove line", "1", "1");
+            assert("if 1 is less than 1 then remove line", "1", "1");
+            assert("if 0 is less than 0 then remove line", "1", "1");
+            assert("if 0 is less than -0 then remove line", "1", "1");
+            assert("if -0 is less than -0 then remove line", "1", "1");
+            assert("if -0 is less than 0 then remove line", "1", "1");
+            assert("if -1 is less than -1 then remove line", "1", "1");
+            assert("if -99999 is less than -99999 then remove line", "1", "1");
+
+            assert("if -99998 is less than -99999 then remove line", "1", "1");
+            assert("if -2 is less than -3 then remove line", "1", "1");
+            assert("if 2 is less than -3 then remove line", "1", "1");
+            assert("if 0 is less than -1 then remove line", "1", "1");
+            assert("if -0 is less than -1 then remove line", "1", "1");
+            assert("if 1 is less than 0 then remove line", "1", "1");
+            assert("if 1 is less than -0 then remove line", "1", "1");
+            assert("if 3 is less than 2 then remove line", "1", "1");
+        },
+        shouldDoIntegerGreaterThanComparison: function () {
+            assert("if -99999 is greater than -99998 then remove line", "1", "1");
+            assert("if -3 is greater than -2 then remove line", "1", "1");
+            assert("if -3 is greater than 2 then remove line", "1", "1");
+            assert("if -1 is greater than 0 then remove line", "1", "1");
+            assert("if -1 is greater than -0 then remove line", "1", "1");
+            assert("if 0 is greater than 1 then remove line", "1", "1");
+            assert("if -0 is greater than 1 then remove line", "1", "1");
+            assert("if 2 is greater than 3 then remove line", "1", "1");
+
+            assert("if 99999 is greater than 99999 then remove line", "1", "1");
+            assert("if 1 is greater than 1 then remove line", "1", "1");
+            assert("if 0 is greater than 0 then remove line", "1", "1");
+            assert("if 0 is greater than -0 then remove line", "1", "1");
+            assert("if -0 is greater than -0 then remove line", "1", "1");
+            assert("if -0 is greater than 0 then remove line", "1", "1");
+            assert("if -1 is greater than -1 then remove line", "1", "1");
+            assert("if -99999 is greater than -99999 then remove line", "1", "1");
+
+            assert("if -99998 is greater than -99999 then remove line", "1", "");
+            assert("if -2 is greater than -3 then remove line", "1", "");
+            assert("if 2 is greater than -3 then remove line", "1", "");
+            assert("if 0 is greater than -1 then remove line", "1", "");
+            assert("if -0 is greater than -1 then remove line", "1", "");
+            assert("if 1 is greater than 0 then remove line", "1", "");
+            assert("if 1 is greater than -0 then remove line", "1", "");
+            assert("if 3 is greater than 2 then remove line", "1", "");
+        },
+        shouldDoIntegerLessThanOrEqualToComparison: function () {
+            assert("if -99999 is less than or equal to -99998 then remove line", "1", "");
+            assert("if -3 is less than or equal to -2 then remove line", "1", "");
+            assert("if -3 is less than or equal to 2 then remove line", "1", "");
+            assert("if -1 is less than or equal to 0 then remove line", "1", "");
+            assert("if -1 is less than or equal to -0 then remove line", "1", "");
+            assert("if 0 is less than or equal to 1 then remove line", "1", "");
+            assert("if -0 is less than or equal to 1 then remove line", "1", "");
+            assert("if 2 is less than or equal to 3 then remove line", "1", "");
+
+            assert("if 99999 is less than or equal to 99999 then remove line", "1", "");
+            assert("if 1 is less than or equal to 1 then remove line", "1", "");
+            assert("if 0 is less than or equal to 0 then remove line", "1", "");
+            assert("if 0 is less than or equal to -0 then remove line", "1", "");
+            assert("if -0 is less than or equal to -0 then remove line", "1", "");
+            assert("if -0 is less than or equal to 0 then remove line", "1", "");
+            assert("if -1 is less than or equal to -1 then remove line", "1", "");
+            assert("if -99999 is less than or equal to -99999 then remove line", "1", "");
+
+            assert("if -99998 is less than or equal to -99999 then remove line", "1", "1");
+            assert("if -2 is less than or equal to -3 then remove line", "1", "1");
+            assert("if 2 is less than or equal to -3 then remove line", "1", "1");
+            assert("if 0 is less than or equal to -1 then remove line", "1", "1");
+            assert("if -0 is less than or equal to -1 then remove line", "1", "1");
+            assert("if 1 is less than or equal to 0 then remove line", "1", "1");
+            assert("if 1 is less than or equal to -0 then remove line", "1", "1");
+            assert("if 3 is less than or equal to 2 then remove line", "1", "1");
+        },
+        shouldDoIntegerGreaterThanOrEqualToComparison: function () {
+            assert("if -99999 is greater than or equal to -99998 then remove line", "1", "1");
+            assert("if -3 is greater than or equal to -2 then remove line", "1", "1");
+            assert("if -3 is greater than or equal to 2 then remove line", "1", "1");
+            assert("if -1 is greater than or equal to 0 then remove line", "1", "1");
+            assert("if -1 is greater than or equal to -0 then remove line", "1", "1");
+            assert("if 0 is greater than or equal to 1 then remove line", "1", "1");
+            assert("if -0 is greater than or equal to 1 then remove line", "1", "1");
+            assert("if 2 is greater than or equal to 3 then remove line", "1", "1");
+
+            assert("if 99999 is greater than or equal to 99999 then remove line", "1", "");
+            assert("if 1 is greater than or equal to 1 then remove line", "1", "");
+            assert("if 0 is greater than or equal to 0 then remove line", "1", "");
+            assert("if 0 is greater than or equal to -0 then remove line", "1", "");
+            assert("if -0 is greater than or equal to -0 then remove line", "1", "");
+            assert("if -0 is greater than or equal to 0 then remove line", "1", "");
+            assert("if -1 is greater than or equal to -1 then remove line", "1", "");
+            assert("if -99999 is greater than or equal to -99999 then remove line", "1", "");
+
+            assert("if -99998 is greater than or equal to -99999 then remove line", "1", "");
+            assert("if -2 is greater than or equal to -3 then remove line", "1", "");
+            assert("if 2 is greater than or equal to -3 then remove line", "1", "");
+            assert("if 0 is greater than or equal to -1 then remove line", "1", "");
+            assert("if -0 is greater than or equal to -1 then remove line", "1", "");
+            assert("if 1 is greater than or equal to 0 then remove line", "1", "");
+            assert("if 1 is greater than or equal to -0 then remove line", "1", "");
+            assert("if 3 is greater than or equal to 2 then remove line", "1", "");
+        },
+        shouldCalcLengthOfLine: function () {
+            assert("if <length of line> is 2 then remove line", "1\n12\n123", "1\n123");
+        },
+        shouldCountAllOccurrences: function () {
+            assert("if <count all occurrences of \"!\"> is 2 then remove line", "...\n.!..\n.!.!.\n.!.!.!", "...\n.!..\n.!.!.!");
+        },
+        shouldCalcLineIndexAtLineN: function () {
+            assert("add new line above line -1", "!\n!\n!", "\n\n\n!\n!\n!");
+            assert("add new line above line 0", "!\n!\n!", "\n\n\n!\n!\n!");
+            assert("add new line above line 1", "!\n!\n!", "\n\n\n!\n!\n!");
+            assert("add new line above line 2", "!\n!\n!", "!\n\n\n\n!\n!");
+            assert("add new line above line 3", "!\n!\n!", "!\n!\n\n\n\n!");
+            assert("add new line above line 4", "!\n!\n!", "!\n!\n!\n\n\n");
+            assert("add new line above line 5", "!\n!\n!", "!\n!\n!\n\n\n");
+
+            assert("add new line below line -1", "!\n!\n!", "\n\n\n!\n!\n!");
+            assert("add new line below line 0", "!\n!\n!", "\n\n\n!\n!\n!");
+            assert("add new line below line 1", "!\n!\n!", "!\n\n\n\n!\n!");
+            assert("add new line below line 2", "!\n!\n!", "!\n!\n\n\n\n!");
+            assert("add new line below line 3", "!\n!\n!", "!\n!\n!\n\n\n");
+            assert("add new line below line 4", "!\n!\n!", "!\n!\n!\n\n\n");
+            assert("add new line below line 5", "!\n!\n!", "!\n!\n!\n\n\n");
+        },
+        shouldQuoteQuoteChars: function () {
+            assert("add \"'\" at position 0", "", "'");
+            assert("add \"''\" at position 0", "", "''");
+            assert("add \"'''\" at position 0", "", "'''");
+            assert("add \"\"'\"\" at position 0", "", "'");
+            assert("add \"\"\"'\"\"\" at position 0", "", "'");
+            assert("add \"\"\"1\"\"1\"\"\" at position 0", "", "1\"\"1");
+            assert("add \"\"\"1\"1\"\"\" at position 0", "", "1\"1");
+
+            assert("add '\"' at position 0", "", "\"");
+            assert("add ''\"'' at position 0", "", "\"");
+            assert("add '''\"''' at position 0", "", "\"");
+            assert("add '''1''1''' at position 0", "", "1''1");
+            assert("add '''1'1''' at position 0", "", "1'1");
+
+            assert("add |\"| at position 0", "", "\"");
+            assert("add ||\"|| at position 0", "", "\"");
+            assert("add |||\"||| at position 0", "", "\"");
+            assert("add |||1||1||| at position 0", "", "1||1");
+            assert("add |||1|1||| at position 0", "", "1|1");
+        },
+
+        // EXAMPLES USED
+        shouldRemoveEmptyLinesFromATextFile: function () {
+            assert("if line is empty then remove line",
+                "Some text\n\nSome more text\n\nEven more text",
+                "Some text\nSome more text\nEven more text");
+        },
+        shouldRemoveAllLinesContainingSomeTextString: function(){
+            assert("if line contains \"bad\" then remove line", 
+                "The weather is nice\nThe month is bad\nThe sky is nice\nThe water is bad",
+                "The weather is nice\nThe sky is nice");
+        },
+        shouldAddTextToTheEndOfEachLine: function () {
+            assert("add \" soon.\" at end of line",
+                "See you\nI will be home\nThe days will be warm",
+                "See you soon.\nI will be home soon.\nThe days will be warm soon.");
+        },
+        shouldChangeTheFormatOfFirstAndLastName: function () {
+            assert("add \" \" at beginning of line and then move text between beginning of last occurrence of \" \" and end of line to position 0 and then remove first occurrence of \" \" and then replace text between position 1 and beginning of first occurrence of \" \" with \".\"",
+                "James Smith\nJohn Johnson\nRobert Williams",
+                "S. James\nJ. John\nW. Robert");
+        },
+        shouldMakeTextUpperOrLowerCase: function () {
+            assert("if line contains \"!\" then convert all characters to upper case else convert all characters to lower case", "Some text!\nSome more text\nEven more text!", "SOME TEXT!\nsome more text\nEVEN MORE TEXT!");
+        },
+        shouldSwapColumnsOfACSVFile: function(){
+            assert("swap text between\n  beginning of line \nand \n  beginning of first occurrence of \",\"\nwith \ntext between \n  end of occurrence number 3 of \",\" \nand \n  beginning of occurrence number 4 of \n\",\"", 
+            "Jack,Manchester,Bike,1,1992\nMichael,London,Car,2,1988\nPete,Birmingham,Bike,3,1991",
+            "1,Manchester,Bike,Jack,1992\n2,London,Car,Michael,1988\n3,Birmingham,Bike,Pete,1991");
+        },
+        shouldTruncateLongLinesAndAdd3DotsAtTheEnd: function(){
+            assert("if <length of line> is greater than 30 then\n  remove text between position 10 and end of line and then\n  add \"...\" at end of line", 
+            "This is a long line. This is a long line.\nThis is a short line.",
+            "This is a ...\nThis is a short line.");
+        }
+    }
+    runTests();
+</script>
